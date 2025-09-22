@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Filter, AlertTriangle, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, Filter, AlertTriangle, Users, TrendingUp, TrendingDown, Loader2, RefreshCw } from 'lucide-react';
 import { StudentProfile } from '@/components/StudentProfile';
+import { useDashboardData } from '@/hooks/useApi';
+import { Student } from '@/services/api';
+import { toast } from 'sonner';
 
-// Mock student data
-const mockStudents = [
+// Mock fallback data for when no data is uploaded
+const mockStudents: Student[] = [
   {
     id: 1,
     name: "Priya Sharma",
@@ -45,39 +48,55 @@ const mockStudents = [
     riskScore: 15,
     riskLevel: "low",
     lastUpdated: "2024-01-15"
-  },
-  {
-    id: 4,
-    name: "Arjun Patel",
-    class: "9th C",
-    department: "Science",
-    attendance: 55,
-    score: 38,
-    feeStatus: "Partial",
-    riskScore: 75,
-    riskLevel: "high",
-    lastUpdated: "2024-01-15"
-  },
-  {
-    id: 5,
-    name: "Sneha Reddy",
-    class: "10th B",
-    department: "Science",
-    attendance: 85,
-    score: 75,
-    feeStatus: "Paid",
-    riskScore: 25,
-    riskLevel: "low",
-    lastUpdated: "2024-01-15"
   }
 ];
 
 export default function Dashboard() {
-  const [students, setStudents] = useState(mockStudents);
+  const { data: dashboardData, loading, error, fetchDashboardData, refreshData } = useDashboardData();
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>(mockStudents);
+
+  // Load dashboard data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchDashboardData();
+      } catch (error) {
+        // If API fails, show warning and use mock data
+        toast.warning('Unable to connect to backend. Showing demo data.');
+        console.error('Dashboard data load failed:', error);
+      }
+    };
+    
+    loadData();
+  }, [fetchDashboardData]);
+
+  // Update students when dashboard data changes
+  useEffect(() => {
+    if (dashboardData?.students?.length > 0) {
+      setStudents(dashboardData.students);
+    } else if (!loading) {
+      // Use mock data if no real data is available
+      setStudents(mockStudents);
+    }
+  }, [dashboardData, loading]);
+
+  // Refresh data with current filters
+  const handleRefreshData = async () => {
+    try {
+      await refreshData({
+        class_filter: classFilter !== 'all' ? classFilter : undefined,
+        risk_filter: riskFilter !== 'all' ? riskFilter : undefined,
+        limit: 100,
+      });
+      toast.success('Dashboard data refreshed successfully!');
+    } catch (error) {
+      // Error already handled by the hook
+    }
+  };
 
   // Filter students based on search and filters
   const filteredStudents = students
@@ -116,9 +135,31 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Student Risk Dashboard</h1>
-        <p className="text-muted-foreground">Monitor and support students before they fall behind</p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Student Risk Dashboard</h1>
+          <p className="text-muted-foreground">Monitor and support students before they fall behind</p>
+        </div>
+        <div className="flex gap-2">
+          {error && (
+            <Badge variant="destructive" className="text-sm">
+              API Error - Using Demo Data
+            </Badge>
+          )}
+          <Button
+            variant="outline"
+            onClick={handleRefreshData}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

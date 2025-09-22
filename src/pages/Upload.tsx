@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useFileUpload } from '@/hooks/useApi';
+import { useNavigate } from 'react-router-dom';
 
 interface UploadFile {
   id: string;
@@ -14,6 +16,8 @@ interface UploadFile {
 }
 
 export default function Upload() {
+  const { data: uploadResult, loading, error, uploadFiles, clearUploadData } = useFileUpload();
+  const navigate = useNavigate();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
@@ -37,7 +41,7 @@ export default function Upload() {
     }
   };
 
-  const handleFiles = (fileList: FileList) => {
+  const handleFiles = async (fileList: FileList) => {
     const newFiles: UploadFile[] = Array.from(fileList).map((file, index) => ({
       id: `${Date.now()}-${index}`,
       name: file.name,
@@ -48,12 +52,32 @@ export default function Upload() {
 
     setFiles(prev => [...prev, ...newFiles]);
     
-    // Simulate upload process
-    newFiles.forEach((file, index) => {
-      setTimeout(() => {
-        simulateUpload(file.id);
-      }, index * 500);
+    // Start upload animation immediately
+    newFiles.forEach((file) => {
+      setFiles(prev => prev.map(f => 
+        f.id === file.id ? { ...f, status: 'uploading' } : f
+      ));
     });
+
+    try {
+      // Upload files to backend
+      await uploadFiles(fileList);
+      
+      // Mark all files as successful
+      newFiles.forEach((file) => {
+        setFiles(prev => prev.map(f => 
+          f.id === file.id ? { ...f, status: 'success', progress: 100 } : f
+        ));
+      });
+      
+    } catch (error) {
+      // Mark files as failed
+      newFiles.forEach((file) => {
+        setFiles(prev => prev.map(f => 
+          f.id === file.id ? { ...f, status: 'error', progress: 0 } : f
+        ));
+      });
+    }
   };
 
   const detectFileType = (fileName: string): 'attendance' | 'marks' | 'fees' => {
@@ -111,7 +135,8 @@ export default function Upload() {
     }
   };
 
-  const allFilesUploaded = files.length > 0 && files.every(file => file.status === 'success');
+  const allFilesUploaded = (files.length > 0 && files.every(file => file.status === 'success')) || 
+                        (uploadResult?.success && uploadResult.results.every(r => r.status === 'success'));
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -215,11 +240,9 @@ export default function Upload() {
               </p>
               <Button
                 className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                asChild
+                onClick={() => navigate('/dashboard')}
               >
-                <a href="/dashboard">
-                  View Risk Dashboard
-                </a>
+                View Risk Dashboard
               </Button>
             </div>
           </CardContent>
