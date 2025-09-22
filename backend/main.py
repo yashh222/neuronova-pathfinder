@@ -13,8 +13,8 @@ import os
 from typing import Dict, Any
 
 # Import routers
-from routers import data_ingestion, risk_detection, alerts
-
+from routers import data_ingestion, risk_detection, alerts, students
+from routers import students
 # Initialize FastAPI app
 app = FastAPI(
     title="Student Dropout Prediction API",
@@ -28,16 +28,17 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:4173",  # Vite preview
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:4173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:4173",
-        # Add your deployed frontend URL here when deploying
+        "http://localhost:8080",   # <-- add this
+        "http://127.0.0.1:8080",   # optional
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -45,6 +46,8 @@ app.add_middleware(
 app.include_router(data_ingestion.router, prefix="/api", tags=["Data Ingestion"])
 app.include_router(risk_detection.router, prefix="/api", tags=["Risk Detection"])
 app.include_router(alerts.router, prefix="/api", tags=["Alerts"])
+app.include_router(students.router, prefix="/api", tags=["Students"])
+
 
 
 @app.get("/")
@@ -56,6 +59,7 @@ async def root() -> Dict[str, str]:
         "docs": "/api/docs",
         "health": "/api/health"
     }
+
 
 
 @app.get("/api/health")
