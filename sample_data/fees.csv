@@ -1,0 +1,13 @@
+student_name,month,amount,status
+Priya Sharma,Jan2024,5000,Overdue
+Priya Sharma,Feb2024,5000,Overdue
+Priya Sharma,Mar2024,5000,Partial
+Raj Kumar,Jan2024,5000,Paid
+Raj Kumar,Feb2024,5000,Paid
+Raj Kumar,Mar2024,5000,Paid
+Anita Singh,Jan2024,5000,Paid
+Anita Singh,Feb2024,5000,Paid
+Anita Singh,Mar2024,5000,Paid
+Arjun Patel,Jan2024,5000,Overdue
+Arjun Patel,Feb2024,5000,Overdue
+Arjun Patel,Mar2024,5000,Overdue
